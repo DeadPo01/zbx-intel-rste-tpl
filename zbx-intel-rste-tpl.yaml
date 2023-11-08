@@ -1,0 +1,179 @@
+zabbix_export:
+  version: '6.0'
+  date: '2023-11-08T07:07:17Z'
+  groups:
+    -
+      uuid: e960332b3f6c46a1956486d4f3f99fce
+      name: 'Templates/Server hardware'
+    -
+      uuid: 040d20d408f447c4a041176b8604e5e9
+      name: 'Templates/storage controllers'
+  templates:
+    -
+      uuid: e93573c306aa48a18b009c8abd54829c
+      template: 'Template Intel RSTe'
+      name: 'Template Intel RSTe'
+      description: 'Template for monitoring integrated intel RSTe RAID over RST_cli.'
+      groups:
+        -
+          name: 'Templates/Server hardware'
+        -
+          name: 'Templates/storage controllers'
+      items:
+        -
+          uuid: d9e38eb764094944bffd7351ca245bd7
+          name: 'Current CLI'
+          type: ZABBIX_ACTIVE
+          key: 'rst.raid[rst.getcli]'
+          delay: 1h
+          history: 14d
+          trends: '0'
+          value_type: TEXT
+          preprocessing:
+            -
+              type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 12h
+          tags:
+            -
+              tag: application
+              value: soft
+          triggers:
+            -
+              uuid: 10db4c3491314aa2bd266da375e6aaf8
+              expression: 'last(/Template Intel RSTe/rst.raid[rst.getcli])<>last(/Template Intel RSTe/rst.raid[rst.getcli],#2)'
+              name: 'RST cli changed on host {HOST.HOST}'
+              priority: WARNING
+      discovery_rules:
+        -
+          uuid: e9c57e3396de43b1aecf6a90d255dff8
+          name: 'Intel RST physical disks discovery'
+          type: ZABBIX_ACTIVE
+          key: 'rst.raid[rst.info,pd,lld]'
+          delay: 1d
+          lifetime: 14d
+          item_prototypes:
+            -
+              uuid: ba87fbc7392a4ad8a1159dd4f1358a26
+              name: 'PD {#DISKID} status'
+              key: 'rst.raid[rst.info,pd,status,{#DISKID}]'
+              delay: 10m
+              history: 30d
+              trends: '0'
+              value_type: TEXT
+              description: |
+                Disk Type: {#DISKTYPE}
+                Model: {#MODEL}
+                Serial: {#SERIAL}
+                Size: {#SIZE}
+                System?: {#SYSTEMDISK}
+                HW Type: {#TYPE}
+                Usage: {#USAGE}
+              preprocessing:
+                -
+                  type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3h
+              tags:
+                -
+                  tag: hardaware
+                  value: hdd
+                -
+                  tag: software
+                  value: rste
+              trigger_prototypes:
+                -
+                  uuid: c7d3f50c19694cfea98fe855d8e023b0
+                  expression: 'last(/Template Intel RSTe/rst.raid[rst.info,pd,status,{#DISKID}])<>"Normal"'
+                  name: 'Status of PD {#ID} on host {HOST.HOST} not normal!'
+                  opdata: 'Status: {HOST.ITEMVALUE1}'
+                  priority: AVERAGE
+          lld_macro_paths:
+            -
+              lld_macro: '{#DISKID}'
+              path: $..ID.first()
+            -
+              lld_macro: '{#USAGE}'
+              path: $..Usage.first()
+            -
+              lld_macro: '{#DISKTYPE}'
+              path: $..DiskType.first()
+            -
+              lld_macro: '{#MODEL}'
+              path: $..Model.first()
+            -
+              lld_macro: '{#SERIAL}'
+              path: $..SerialNumber.first()
+            -
+              lld_macro: '{#SIZE}'
+              path: $..Size.first()
+            -
+              lld_macro: '{#SYSTEMDISK}'
+              path: $..SystemDisk.first()
+            -
+              lld_macro: '{#TYPE}'
+              path: $..Type.first()
+        -
+          uuid: 0e3334ba48ca4b33901e0744367fc7a3
+          name: 'Intel RST volumes discovery'
+          type: ZABBIX_ACTIVE
+          key: 'rst.raid[rst.info,vol,lld]'
+          delay: 1d
+          lifetime: 14d
+          item_prototypes:
+            -
+              uuid: bc1579a946a04cb188e0c69a787d3bb7
+              name: 'Volume {#NAME} status'
+              key: 'rst.raid[rst.info,vol,status,{#NAME}]'
+              delay: 10m
+              history: 30d
+              trends: '0'
+              value_type: TEXT
+              description: |
+                Name: {#NAME}
+                Level: {#LEVEL}
+                Bootable?: {#BOOTABLE}
+                NumDisks: {#NUMDISKS}
+                Size: {#SIZE}
+              preprocessing:
+                -
+                  type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3h
+              tags:
+                -
+                  tag: software
+                  value: rste
+                -
+                  tag: software
+                  value: volume
+              trigger_prototypes:
+                -
+                  uuid: 4773de378639433fa3c76d5b98e827a7
+                  expression: 'last(/Template Intel RSTe/rst.raid[rst.info,vol,status,{#NAME}])<>"Normal"'
+                  name: 'Status of volume {#NAME} on host {HOST.HOST} not normal!'
+                  opdata: 'Status: {HOST.ITEMVALUE1}'
+                  priority: AVERAGE
+          lld_macro_paths:
+            -
+              lld_macro: '{#BOOTABLE}'
+              path: $..Bootable.first()
+            -
+              lld_macro: '{#LEVEL}'
+              path: $..RaidLevel.first()
+            -
+              lld_macro: '{#NAME}'
+              path: $..Name.first()
+            -
+              lld_macro: '{#NUMDISKS}'
+              path: $..NumDisks.first()
+            -
+              lld_macro: '{#SIZE}'
+              path: $..Size.first()
+            -
+              lld_macro: '{#SYSTEM}'
+              path: $..System.first()
+      tags:
+        -
+          tag: hardware
+          value: raid
